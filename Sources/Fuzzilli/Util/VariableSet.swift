@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-struct VariableSet: Equatable {
+public struct VariableSet: Hashable, Codable {
     // We can use a bitset for efficient operations.
     typealias Word = UInt64
+    
+    // The bitset is implemented as array of words. This array must not have trailing
+    // zero words at the end so that set comparison works correctly.
     private var words: [Word]
     
-    // Construct an empty VariableSet.
-    init() {
+    // Constructs an empty VariableSet.
+    public init() {
         self.words = []
     }
     
-    // Construct a VariableSet containing the given variables.
-    init<S: Sequence>(_ initialVariables: S) where S.Element == Variable {
+    // Constructs a VariableSet containing the given variables.
+    public init<S: Sequence>(_ initialVariables: S) where S.Element == Variable {
         self.words = []
         for v in initialVariables {
             insert(v)
@@ -36,36 +39,38 @@ struct VariableSet: Equatable {
         return (i, 1 << s)
     }
     
-    private mutating func ensureWordCount(atLeast n: Int) {
-        if n > words.count {
-            for _ in words.count..<n {
+    private mutating func growIfNecessary(to newLen: Int) {
+        if newLen > words.count {
+            for _ in words.count..<newLen {
                 words.append(0)
             }
         }
     }
     
+    private mutating func shrinkIfNecessary() {
+        while words.count > 0 && words.last! == 0 {
+            words.removeLast()
+        }
+    }
+    
     /// Inserts the given variable into this set.
-    mutating func insert(_ v: Variable) {
+    public mutating func insert(_ v: Variable) {
         let (i, b) = index(of: v)
-        ensureWordCount(atLeast: i + 1)
+        growIfNecessary(to: i + 1)
         words[i] |= b
     }
     
     /// Removes the given variable from this set.
-    mutating func remove(_ v: Variable) {
+    public mutating func remove(_ v: Variable) {
         let (i, b) = index(of: v)
         if i < words.count {
             words[i] &= ~b
-            
-            // Must remove trailing words if they are empty so that set comparison works as expected.
-            if i == words.count - 1 && words[i] == 0 {
-                words.removeLast()
-            }
+            shrinkIfNecessary()
         }
     }
     
     /// Returns true if this set contains the given variable, false otherwise.
-    func contains(_ v: Variable) -> Bool {
+    public func contains(_ v: Variable) -> Bool {
         let (i, b) = index(of: v)
         if i < words.count {
             return words[i] & b == b
@@ -74,29 +79,36 @@ struct VariableSet: Equatable {
     }
     
     /// Merges the variables from the given set into this set.
-    mutating func formUnion(_ other: VariableSet) {
-        ensureWordCount(atLeast: other.words.count)
+    public mutating func formUnion(_ other: VariableSet) {
+        growIfNecessary(to: other.words.count)
         for (i, w) in other.words.enumerated() {
             words[i] |= w
         }
     }
     
     /// Merges the given variables into this set.
-    mutating func formUnion<S: Sequence>(_ other: S) where S.Element == Variable {
+    public mutating func formUnion<S: Sequence>(_ other: S) where S.Element == Variable {
         for v in other {
             insert(v)
         }
     }
     
     /// Returns a new set with the variables from this set and the provided set.
-    func union(_ other: VariableSet) -> VariableSet {
+    public func union(_ other: VariableSet) -> VariableSet {
+        var result = self
+        result.formUnion(other)
+        return result
+    }
+    
+    /// Returns a new set with the variables from this set and the provided set.
+    public func union<S: Sequence>(_ other: S) -> VariableSet where S.Element == Variable {
         var result = self
         result.formUnion(other)
         return result
     }
     
     /// Returns true if this set and provided set have no variables in common.
-    func isDisjoint(with other: VariableSet) -> Bool {
+    public func isDisjoint(with other: VariableSet) -> Bool {
         for (i, w) in other.words.enumerated() {
             if i < words.count && words[i] & w != 0 {
                 return false
@@ -106,7 +118,7 @@ struct VariableSet: Equatable {
     }
     
     /// Returns true if this and the provided set have no variables in common.
-    func isDisjoint<S: Sequence>(with other: S) -> Bool where S.Element == Variable {
+    public func isDisjoint<S: Sequence>(with other: S) -> Bool where S.Element == Variable {
         for v in other {
             if contains(v) {
                 return false
@@ -116,7 +128,7 @@ struct VariableSet: Equatable {
     }
     
     /// Returns true if the two given sets are equal.
-    static func ==(lhs: VariableSet, rhs: VariableSet) -> Bool {
+    public static func ==(lhs: VariableSet, rhs: VariableSet) -> Bool {
         return lhs.words == rhs.words
     }
 }

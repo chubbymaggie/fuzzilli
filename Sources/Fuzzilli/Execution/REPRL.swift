@@ -125,8 +125,8 @@ public class REPRL: ComponentBase, ScriptRunner {
         var result = reprl_result()
         
         let code = script.data(using: .utf8)!
-        let res = code.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> CInt in
-            return reprl_execute_script(pid, crfd, cwfd, drfd, dwfd, CInt(timeout), bytes, Int64(code.count), &result)
+        let res = code.withUnsafeBytes { (body: UnsafeRawBufferPointer) -> CInt in
+            return reprl_execute_script(pid, crfd, cwfd, drfd, dwfd, CInt(timeout), body.bindMemory(to: Int8.self).baseAddress, Int64(code.count), &result)
         }
         
         if res != 0 {
@@ -148,6 +148,6 @@ public class REPRL: ComponentBase, ScriptRunner {
                          outcome: ExecutionOutcome.fromExitStatus(result.status),
                          termsig: Int(WTERMSIG(result.status)),
                          output: output,
-                         execTime: Int(result.exec_time))
+                         execTime: UInt(result.exec_time))
     }
 }

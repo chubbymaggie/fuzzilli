@@ -11,8 +11,8 @@ The basic steps to use this fuzzer are:
 1. Download the source code for one of the supported JavaScript engines (currently [JavaScriptCore](https://github.com/WebKit/webkit), [Spidermonkey](https://github.com/mozilla/gecko-dev), and [v8](https://github.com/v8/v8)).
 2. Apply the corresponding patch from the [Targets/](Targets/) directory. Also see the README.md in that directory.
 3. Compile the engine with coverage instrumentation (requires clang >= 4.0) as described in the README.
-4. Compile the fuzzer: `swift build [-c release]`. On Linux you will also need to supply `-Xlinker='-lrt'` as argument to `swift build`.
-5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other options] /path/to/jsshell`. See also `swift run FuzzilliCli --help`.
+4. Compile the fuzzer: `swift build [-c release]`.
+5. Run the fuzzer: `swift run [-c release] FuzzilliCli --profile=<profile> [other cli options] /path/to/jsshell`. See also `swift run FuzzilliCli --help`.
 
 ### Hacking
 
@@ -86,12 +86,12 @@ The fuzzer is implemented in [Swift](https://swift.org/), with some parts (e.g. 
 
 ### Architecture
 
-A fuzzer instance (implemented in Fuzzer.swift) is made up of the following central components:
+A fuzzer instance (implemented in [Fuzzer.swift](Sources/Fuzzilli/Fuzzer.swift)) is made up of the following central components:
 
 * [FuzzerCore](Sources/Fuzzilli/Core/FuzzerCore.swift): produces new programs from existing ones by applying [mutations](Sources/Fuzzilli/Mutators). Afterwards executes the produced samples and evaluates them.
 * [ScriptRunner](Sources/Fuzzilli/Execution): executes programs of the target language.
 * [Corpus](Sources/Fuzzilli/Core/Corpus.swift): stores interesting samples and supplies them to the core fuzzer.
-* [Environment](Sources/Fuzzilli/Core/Environment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
+* [Environment](Sources/Fuzzilli/Core/JavaScriptEnvironment.swift): has knowledge of the runtime environment, e.g. the available builtins, property names, and methods.
 * [Minimizer](Sources/Fuzzilli/Minimization/Minimizer.swift): minimizes crashing and interesting programs.
 * [Evaluator](Sources/Fuzzilli/Evaluation): evaluates whether a sample is interesting according to some metric, e.g. code coverage.
 * [Lifter](Sources/Fuzzilli/Lifting): translates a FuzzIL program to the target language (JavaScript).
